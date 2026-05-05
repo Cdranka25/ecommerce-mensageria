@@ -19,8 +19,11 @@
         <button class="btn btn-primary" onclick="iniciarConsumidores()">
           &#9654; Iniciar Consumidores
         </button>
-        <button class="btn btn-danger" onclick="iniciarProdutor()">
-          &#128722; Enviar Pedidos
+        <button class="btn btn-teste" onclick="iniciarProdutorTeste()">
+          &#129514; Enviar Pedidos Teste
+        </button>
+        <button class="btn btn-danger" onclick="abrirModalPedido()">
+          &#128722; Criar Pedido
         </button>
         <button class="btn" onclick="pararTudo()">&#9632; Parar Tudo</button>
         <button class="btn" onclick="limparLogs()">&#128465; Limpar</button>
@@ -62,6 +65,90 @@
     </footer>
 
     <div class="toast" id="toast"></div>
+
+    <!-- ── Modal: Criar Pedido ────────────────────────────────── -->
+    <div class="modal-overlay" id="modal-overlay">
+      <div class="modal">
+        <div class="modal-header">
+          <span class="modal-titulo">&#128722; Criar Pedido</span>
+          <button class="modal-fechar" onclick="fecharModalPedido()">&#10005;</button>
+        </div>
+
+        <form id="form-pedido" onsubmit="return false">
+          <div class="modal-section-label">Cliente</div>
+          <div class="modal-row">
+            <div class="modal-field">
+              <label>Nome <span class="obrig">*</span></label>
+              <input id="modal-nome" type="text" placeholder="Ex: João Silva" />
+            </div>
+            <div class="modal-field">
+              <label>E-mail <span class="obrig">*</span></label>
+              <input id="modal-email" type="email" placeholder="joao@email.com" />
+            </div>
+          </div>
+
+          <div class="modal-section-label">Produto</div>
+          <div class="modal-row">
+            <div class="modal-field modal-field--grow">
+              <label>Nome do produto <span class="obrig">*</span></label>
+              <input id="modal-produto" type="text" placeholder="Ex: Notebook Dell XPS" />
+            </div>
+            <div class="modal-field modal-field--small">
+              <label>Preço unit. (R$) <span class="obrig">*</span></label>
+              <input id="modal-preco" type="number" min="0.01" step="0.01" placeholder="0,00" />
+            </div>
+            <div class="modal-field modal-field--small">
+              <label>Quantidade <span class="obrig">*</span></label>
+              <input id="modal-qtd" type="number" min="1" value="1" />
+            </div>
+          </div>
+
+          <div class="modal-section-label">Pagamento</div>
+          <div class="modal-row">
+            <div class="modal-field">
+              <label>Forma de pagamento <span class="obrig">*</span></label>
+              <select id="modal-pagamento">
+                <option value="pix">PIX</option>
+                <option value="cartao_credito">Cartão de Crédito</option>
+                <option value="boleto">Boleto</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="modal-section-label">Endereço de entrega</div>
+          <div class="modal-row">
+            <div class="modal-field modal-field--grow">
+              <label>Rua / Número</label>
+              <input id="modal-rua" type="text" placeholder="Rua das Flores, 123" />
+            </div>
+            <div class="modal-field">
+              <label>Cidade</label>
+              <input id="modal-cidade" type="text" placeholder="Blumenau" />
+            </div>
+          </div>
+          <div class="modal-row">
+            <div class="modal-field modal-field--small">
+              <label>Estado</label>
+              <input id="modal-estado" type="text" maxlength="2" placeholder="SC" />
+            </div>
+            <div class="modal-field modal-field--small">
+              <label>CEP</label>
+              <input id="modal-cep" type="text" placeholder="89000-000" />
+            </div>
+          </div>
+
+          <div class="modal-erro" id="modal-erro"></div>
+
+          <div class="modal-actions">
+            <button class="btn" type="button" onclick="fecharModalPedido()">Cancelar</button>
+            <button class="btn btn-danger" type="button"
+                    id="btn-enviar-pedido" onclick="enviarPedidoManual()">
+              Enviar Pedido
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
 
     <script src="script.js"></script>
   </body>

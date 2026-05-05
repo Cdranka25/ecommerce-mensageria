@@ -1,16 +1,23 @@
 # -*- coding: utf-8 -*-
 #!/usr/bin/env python3
 # ============================================================
-#  produtor/servico_pedidos.py  -  Produtor de mensagens
+#  produtor/servico_pedidos.py  -  Produtor de pedido REAL
 #
-#  Simula o "Serviço de Pedidos" de um e-commerce.
-#  Ao receber um novo pedido, publica uma mensagem JSON
-#  no RabbitMQ para todos os consumidores interessados.
+#  Publica UM único pedido com dados fornecidos pelo usuário
+#  via argumento JSON na linha de comando.
+#
+#  Uso:
+#      python produtor/servico_pedidos.py '<json_do_pedido>'
+#
+#  O JSON deve conter os campos:
+#      cliente_nome, cliente_email,
+#      produto_nome, produto_preco,
+#      quantidade, forma_pagamento,
+#      endereco_rua, endereco_cidade, endereco_estado, endereco_cep
 # ============================================================
 import pika
 import json
 import uuid
-import random
 import time
 import sys
 import os
@@ -21,44 +28,32 @@ from config.conexao import criar_conexao, setup_infraestrutura
 from config.settings import EXCHANGE_NAME, ROUTING_KEY_NOVO_PEDIDO
 
 
-# ── Dados de exemplo para simulação ─────────────────────────
-PRODUTOS = [
-    {"id": "P001", "nome": "Teclado Mecânico", "preco": 299.90},
-    {"id": "P002", "nome": "Monitor 27\"",      "preco": 1499.00},
-    {"id": "P003", "nome": "Mouse Gamer",        "preco": 189.90},
-    {"id": "P004", "nome": "Headset USB",        "preco": 249.90},
-    {"id": "P005", "nome": "Webcam Full HD",     "preco": 349.00},
-]
-
-CLIENTES = [
-    {"id": "C001", "nome": "Ana Souza",    "email": "ana@email.com"},
-    {"id": "C002", "nome": "Bruno Lima",   "email": "bruno@email.com"},
-    {"id": "C003", "nome": "Carla Mendes", "email": "carla@email.com"},
-]
-
-FORMAS_PAGAMENTO = ["cartao_credito", "pix", "boleto"]
-
-
-def gerar_pedido() -> dict:
-    """Cria um pedido fictício com dados aleatórios."""
-    cliente  = random.choice(CLIENTES)
-    produto  = random.choice(PRODUTOS)
-    qtd      = random.randint(1, 3)
-    total    = round(produto["preco"] * qtd, 2)
+def montar_pedido(dados: dict) -> dict:
+    """Constrói o payload de pedido a partir dos dados fornecidos pelo usuário."""
+    preco = float(dados.get("produto_preco", 0))
+    qtd   = int(dados.get("quantidade", 1))
 
     return {
-        "pedido_id":       str(uuid.uuid4()),
-        "timestamp":       datetime.now().isoformat(),
-        "cliente":         cliente,
-        "produto":         produto,
-        "quantidade":      qtd,
-        "total":           total,
-        "forma_pagamento": random.choice(FORMAS_PAGAMENTO),
+        "pedido_id":  str(uuid.uuid4()),
+        "timestamp":  datetime.now().isoformat(),
+        "cliente": {
+            "id":    str(uuid.uuid4())[:8].upper(),
+            "nome":  dados.get("cliente_nome", ""),
+            "email": dados.get("cliente_email", ""),
+        },
+        "produto": {
+            "id":    f"CUSTOM-{str(uuid.uuid4())[:6].upper()}",
+            "nome":  dados.get("produto_nome", ""),
+            "preco": preco,
+        },
+        "quantidade":       qtd,
+        "total":            round(preco * qtd, 2),
+        "forma_pagamento":  dados.get("forma_pagamento", "pix"),
         "endereco_entrega": {
-            "rua":    "Rua das Flores, 123",
-            "cidade": "Blumenau",
-            "estado": "SC",
-            "cep":    "89000-000",
+            "rua":    dados.get("endereco_rua", ""),
+            "cidade": dados.get("endereco_cidade", ""),
+            "estado": dados.get("endereco_estado", ""),
+            "cep":    dados.get("endereco_cep", ""),
         },
     }
 
@@ -72,17 +67,19 @@ def publicar_pedido(canal, pedido: dict):
         routing_key=ROUTING_KEY_NOVO_PEDIDO,
         body=mensagem.encode("utf-8"),
         properties=pika.BasicProperties(
-            delivery_mode=2,               # Mensagem persistente (sobrevive a crash)
+            delivery_mode=2,
             content_type="application/json",
             message_id=pedido["pedido_id"],
             timestamp=int(time.time()),
         ),
     )
     print(f"\n[>>] Pedido publicado: {pedido['pedido_id']}")
-    print(f"    Cliente : {pedido['cliente']['nome']}")
-    print(f"    Produto : {pedido['produto']['nome']} x{pedido['quantidade']}")
-    print(f"    Total   : R$ {pedido['total']:.2f}")
+    print(f"    Cliente  : {pedido['cliente']['nome']} <{pedido['cliente']['email']}>")
+    print(f"    Produto  : {pedido['produto']['nome']} x{pedido['quantidade']}")
+    print(f"    Total    : R$ {pedido['total']:.2f}")
     print(f"    Pagamento: {pedido['forma_pagamento']}")
+    print(f"    Endereço : {pedido['endereco_entrega']['rua']}, "
+          f"{pedido['endereco_entrega']['cidade']}-{pedido['endereco_entrega']['estado']}")
 
 
 def main():
@@ -90,22 +87,24 @@ def main():
     print("   SERVIÇO DE PEDIDOS  -  E-commerce Mensageria")
     print("=" * 55)
 
+    if len(sys.argv) < 2:
+        print("[ERRO] Nenhum dado de pedido fornecido.")
+        print("Uso: python produtor/servico_pedidos.py '<json>'")
+        sys.exit(1)
+
+    try:
+        dados = json.loads(sys.argv[1])
+    except json.JSONDecodeError as e:
+        print(f"[ERRO] JSON inválido: {e}")
+        sys.exit(1)
+
+    pedido  = montar_pedido(dados)
     conexao = criar_conexao()
     canal   = conexao.channel()
-
-    # Garante que toda a infraestrutura existe antes de publicar
     setup_infraestrutura(canal)
-
-    # Publica 5 pedidos com intervalo de 2 segundos entre eles
-    total_pedidos = 5
-    for i in range(1, total_pedidos + 1):
-        print(f"\n── Pedido {i}/{total_pedidos} " + "─" * 30)
-        pedido = gerar_pedido()
-        publicar_pedido(canal, pedido)
-        time.sleep(2)
-
+    publicar_pedido(canal, pedido)
     conexao.close()
-    print(f"\n[[OK]] {total_pedidos} pedidos publicados. Conexão encerrada.")
+    print("\n[[OK]] Pedido publicado com sucesso. Conexão encerrada.")
 
 
 if __name__ == "__main__":

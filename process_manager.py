@@ -22,6 +22,7 @@ SERVICOS = [
     {"id": "fiscal",      "nome": "Nota Fiscal",  "script": "consumidores/fiscal.py",      "cor": "#a855f7", "icone": "🧾", "tipo": "consumidor"},
     {"id": "logistica",   "nome": "Logistica",    "script": "consumidores/logistica.py",   "cor": "#06b6d4", "icone": "🚚", "tipo": "consumidor"},
     {"id": "pedidos",     "nome": "Pedidos",      "script": "produtor/servico_pedidos.py", "cor": "#ef4444", "icone": "🛒", "tipo": "produtor"},
+    {"id": "pedidos_teste", "nome": "Pedidos Teste", "script": "produtor/servico_pedidos_teste.py", "cor": "#f97316", "icone": "🧪", "tipo": "produtor_teste"},
 ]
 
 
@@ -47,14 +48,63 @@ class ProcessManager:
         for srv in self._consumidores():
             self._iniciar(srv)
 
-    def iniciar_produtor(self) -> tuple[bool, str]:
+    def iniciar_produtor_teste(self) -> tuple[bool, str]:
         """
-        Inicia o produtor.
+        Inicia o produtor de teste (5 pedidos aleatórios).
         Retorna (sucesso, mensagem_de_erro).
         """
-        if not self._iniciados.intersection({s["id"] for s in self._consumidores()}):
+        if not self._consumidores_ativos():
             return False, "Inicie os consumidores antes de enviar pedidos."
-        self._iniciar(self._produtor())
+        self._iniciar(self._produtor_teste())
+        return True, ""
+
+    def iniciar_produtor_manual(self, dados_pedido: dict) -> tuple[bool, str]:
+        """
+        Inicia o produtor manual com os dados fornecidos pelo usuário.
+        Passa o JSON do pedido como argumento para o script.
+        Retorna (sucesso, mensagem_de_erro).
+        """
+        import json as _json
+
+        if not self._consumidores_ativos():
+            return False, "Inicie os consumidores antes de enviar pedidos."
+
+        srv = self._produtor_manual()
+        sid = srv["id"]
+
+        # Permite múltiplas execuções do produtor manual (não bloqueia se já foi usado)
+        if sid in self._processos and self._processos[sid].poll() is None:
+            # Ainda rodando — aguarda terminar (é um processo de vida curta)
+            pass
+
+        env = os.environ.copy()
+        env["PYTHONUTF8"]       = "1"
+        env["PYTHONIOENCODING"] = "utf-8"
+
+        json_pedido = _json.dumps(dados_pedido, ensure_ascii=False)
+
+        proc = subprocess.Popen(
+            [sys.executable, "-u", os.path.join(BASE, srv["script"]), json_pedido],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+            bufsize=1,
+            encoding="utf-8",
+            errors="replace",
+            cwd=BASE,
+            env=env,
+        )
+
+        self._processos[sid] = proc
+        self._iniciados.add(sid)
+        self._on_status(sid, "rodando")
+
+        threading.Thread(
+            target=self._ler_stdout,
+            args=(proc, srv),
+            daemon=True,
+        ).start()
+
         return True, ""
 
     def parar_tudo(self):
@@ -71,14 +121,14 @@ class ProcessManager:
         return SERVICOS
 
     def consumidores_iniciados(self) -> bool:
-        return bool(self._iniciados.intersection({s["id"] for s in self._consumidores()}))
+        return self._consumidores_ativos()
 
     # ── Internos ─────────────────────────────────────────────
 
     def _iniciar(self, srv: dict):
         sid = srv["id"]
         if sid in self._processos and self._processos[sid].poll() is None:
-            return  # ja rodando
+            return  # já rodando
 
         env = os.environ.copy()
         env["PYTHONUTF8"]        = "1"
@@ -100,7 +150,6 @@ class ProcessManager:
         self._iniciados.add(sid)
         self._on_status(sid, "rodando")
 
-        # Thread dedicada para leitura do stdout do processo
         threading.Thread(
             target=self._ler_stdout,
             args=(proc, srv),
@@ -140,5 +189,12 @@ class ProcessManager:
     def _consumidores(self) -> list[dict]:
         return [s for s in SERVICOS if s["tipo"] == "consumidor"]
 
-    def _produtor(self) -> dict:
+    def _consumidores_ativos(self) -> bool:
+        ids_consumidores = {s["id"] for s in self._consumidores()}
+        return bool(self._iniciados.intersection(ids_consumidores))
+
+    def _produtor_manual(self) -> dict:
         return next(s for s in SERVICOS if s["tipo"] == "produtor")
+
+    def _produtor_teste(self) -> dict:
+        return next(s for s in SERVICOS if s["tipo"] == "produtor_teste")

@@ -7,9 +7,6 @@
 #  HTTP, servir o dashboard.html e retransmitir eventos via
 #  Server-Sent Events (SSE).
 #
-#  Nao contem nenhuma logica de UI, estilos ou gerenciamento
-#  de processos — isso e responsabilidade do ProcessManager.
-#
 #  Executar:  python launcher_server.py
 #  Acessar:   http://localhost:8080
 # ============================================================
@@ -23,7 +20,7 @@ from urllib.parse import urlparse
 
 from process_manager import ProcessManager
 
-BASE = os.path.dirname(os.path.abspath(__file__))
+BASE  = os.path.dirname(os.path.abspath(__file__))
 PORTA = 8080
 
 # Fila de eventos SSE
@@ -73,38 +70,50 @@ class AppHandler(http.server.BaseHTTPRequestHandler):
             self._sse()
 
         else:
-            # Tenta servir arquivos estáticos automaticamente
-            caminho = rota.lstrip("/")  # remove "/"
-            path = os.path.join(BASE, caminho)
+            caminho = rota.lstrip("/")
+            path    = os.path.join(BASE, caminho)
 
             if os.path.exists(path) and os.path.isfile(path):
-                # Detecta tipo básico
                 if path.endswith(".css"):
-                    content_type = "text/css"
+                    ct = "text/css"
                 elif path.endswith(".js"):
-                    content_type = "application/javascript"
+                    ct = "application/javascript"
                 elif path.endswith(".html"):
-                    content_type = "text/html"
+                    ct = "text/html"
                 elif path.endswith(".svg"):
-                    content_type = "image/svg+xml"
+                    ct = "image/svg+xml"
                 else:
-                    content_type = "application/octet-stream"
-
-                self._servir_arquivo(caminho, content_type)
+                    ct = "application/octet-stream"
+                self._servir_arquivo(caminho, ct)
             else:
                 self.send_error(404)
 
     def do_POST(self):
         rota = urlparse(self.path).path
+
         if rota == "/iniciar-consumidores":
             manager.iniciar_consumidores()
             self._json({"ok": True})
-        elif rota == "/iniciar-produtor":
-            ok, erro = manager.iniciar_produtor()
+
+        elif rota == "/iniciar-produtor-teste":
+            ok, erro = manager.iniciar_produtor_teste()
             self._json({"ok": ok, "erro": erro})
+
+        elif rota == "/iniciar-produtor-manual":
+            tamanho = int(self.headers.get("Content-Length", 0))
+            corpo   = self.rfile.read(tamanho)
+            try:
+                dados = json.loads(corpo.decode("utf-8"))
+            except json.JSONDecodeError:
+                self._json({"ok": False, "erro": "JSON inválido no corpo da requisição."})
+                return
+            ok, erro = manager.iniciar_produtor_manual(dados)
+            self._json({"ok": ok, "erro": erro})
+
         elif rota == "/parar":
             manager.parar_tudo()
             self._json({"ok": True})
+
         else:
             self.send_error(404)
 

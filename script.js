@@ -13,7 +13,6 @@ async function boot() {
   const res = await fetch("/servicos");
   state.servicos = await res.json();
 
-  // Inicializa estruturas de dados
   state.logs["todos"] = [];
   state.servicos.forEach((s) => {
     state.logs[s.id] = [];
@@ -49,7 +48,7 @@ function renderCards() {
 }
 
 function atualizarCard(id, estado) {
-  const card = document.getElementById(`card-${id}`);
+  const card   = document.getElementById(`card-${id}`);
   const status = document.getElementById(`status-${id}`);
   if (!card) return;
   card.classList.toggle("ativo", estado === "rodando");
@@ -65,8 +64,8 @@ function incrementarCard(id) {
 // ── Renderizacao das abas ─────────────────────────────────────
 function renderTabs() {
   const container = document.getElementById("tabs");
-  const todas = [{ id: "todos", nome: "Todos", icone: "&#128203;" }];
-  const lista = todas.concat(state.servicos);
+  const todas     = [{ id: "todos", nome: "Todos", icone: "&#128203;" }];
+  const lista     = todas.concat(state.servicos);
 
   container.innerHTML = lista
     .map(
@@ -95,22 +94,21 @@ function atualizarBadges(id) {
   const b2 = document.getElementById("badge-todos");
   if (b1) b1.textContent = state.logs[id]?.length || 0;
   if (b2) b2.textContent = state.logs["todos"]?.length || 0;
-  document.getElementById("log-info").textContent =
-    `${state.totalMsgs} mensagens`;
+  document.getElementById("log-info").textContent = `${state.totalMsgs} mensagens`;
 }
 
 // ── Logs ──────────────────────────────────────────────────────
 function classificar(msg) {
-  if (msg.includes("[OK]")) return "ok";
+  if (msg.includes("[OK]"))                         return "ok";
   if (msg.includes("[FALHA]") || msg.includes("[ERRO]")) return "erro";
-  if (msg.includes("[RETRY]") || msg.includes("[DLQ]")) return "retry";
-  if (msg.includes("[SISTEMA]")) return "sys";
+  if (msg.includes("[RETRY]") || msg.includes("[DLQ]"))  return "retry";
+  if (msg.includes("[SISTEMA]"))                    return "sys";
   return "";
 }
 
 function adicionarLog(evento) {
   const { id, nome, cor, msg, ts } = evento;
-  const classe = classificar(msg);
+  const classe  = classificar(msg);
   const entrada = { id, nome, cor, msg, ts, classe };
 
   state.logs["todos"].push(entrada);
@@ -121,11 +119,9 @@ function adicionarLog(evento) {
   state.totalMsgs++;
   atualizarBadges(id);
 
-  // Remove placeholder vazio
   const vazio = document.getElementById("log-empty");
   if (vazio) vazio.remove();
 
-  // Adiciona ao DOM somente se a aba estiver visivel
   if (state.abaAtiva === id || state.abaAtiva === "todos") {
     const body = document.getElementById("log-body");
     body.appendChild(criarLinhaLog(entrada, state.abaAtiva === "todos"));
@@ -134,8 +130,8 @@ function adicionarLog(evento) {
 }
 
 function criarLinhaLog(entrada, mostrarTag) {
-  const srv = state.servicos.find((s) => s.id === entrada.id);
-  const cor = srv ? srv.cor : "#888";
+  const srv   = state.servicos.find((s) => s.id === entrada.id);
+  const cor   = srv ? srv.cor : "#888";
   const tagBg = cor + "22";
 
   const row = document.createElement("div");
@@ -149,7 +145,7 @@ function criarLinhaLog(entrada, mostrarTag) {
 }
 
 function renderLogsCompleto() {
-  const body = document.getElementById("log-body");
+  const body  = document.getElementById("log-body");
   const lista = state.logs[state.abaAtiva] || [];
   body.innerHTML = "";
 
@@ -163,7 +159,7 @@ function renderLogsCompleto() {
   }
 
   const mostrarTag = state.abaAtiva === "todos";
-  const frag = document.createDocumentFragment();
+  const frag       = document.createDocumentFragment();
   lista.forEach((e) => frag.appendChild(criarLinhaLog(e, mostrarTag)));
   body.appendChild(frag);
   body.scrollTop = body.scrollHeight;
@@ -194,7 +190,7 @@ function conectarSSE() {
 
   state.sse.onmessage = (e) => {
     const ev = JSON.parse(e.data);
-    if (ev.tipo === "log") adicionarLog(ev);
+    if (ev.tipo === "log")    adicionarLog(ev);
     if (ev.tipo === "status") {
       atualizarCard(ev.id, ev.estado);
       setFooter(`${ev.id}: ${ev.estado}`);
@@ -215,12 +211,12 @@ async function iniciarConsumidores() {
   toast("Consumidores iniciados!");
 }
 
-async function iniciarProdutor() {
-  const r = await fetch("/iniciar-produtor", { method: "POST" });
+async function iniciarProdutorTeste() {
+  const r = await fetch("/iniciar-produtor-teste", { method: "POST" });
   const d = await r.json();
   if (d.ok) {
-    setFooter("Produtor publicando pedidos...");
-    toast("Pedidos sendo enviados!");
+    setFooter("Produtor de teste publicando 5 pedidos aleatórios...");
+    toast("Pedidos de teste sendo enviados!");
   } else {
     toast(d.erro, true);
   }
@@ -231,6 +227,74 @@ async function pararTudo() {
   setFooter("Todos os processos encerrados.");
   toast("Processos encerrados.");
 }
+
+// ── Modal de pedido manual ────────────────────────────────────
+function abrirModalPedido() {
+  document.getElementById("modal-overlay").classList.add("visivel");
+  document.getElementById("modal-nome").focus();
+}
+
+function fecharModalPedido() {
+  document.getElementById("modal-overlay").classList.remove("visivel");
+  document.getElementById("form-pedido").reset();
+  document.getElementById("modal-erro").textContent = "";
+}
+
+async function enviarPedidoManual() {
+  const get = (id) => document.getElementById(id).value.trim();
+
+  const campos = {
+    cliente_nome:     get("modal-nome"),
+    cliente_email:    get("modal-email"),
+    produto_nome:     get("modal-produto"),
+    produto_preco:    get("modal-preco"),
+    quantidade:       get("modal-qtd"),
+    forma_pagamento:  get("modal-pagamento"),
+    endereco_rua:     get("modal-rua"),
+    endereco_cidade:  get("modal-cidade"),
+    endereco_estado:  get("modal-estado"),
+    endereco_cep:     get("modal-cep"),
+  };
+
+  // Validação básica
+  const obrigatorios = ["cliente_nome", "cliente_email", "produto_nome",
+                        "produto_preco", "quantidade", "forma_pagamento"];
+  const faltando = obrigatorios.filter((k) => !campos[k]);
+  if (faltando.length) {
+    document.getElementById("modal-erro").textContent =
+      "Preencha todos os campos obrigatórios (*)";
+    return;
+  }
+
+  const btn = document.getElementById("btn-enviar-pedido");
+  btn.disabled    = true;
+  btn.textContent = "Enviando...";
+
+  const r = await fetch("/iniciar-produtor-manual", {
+    method:  "POST",
+    headers: { "Content-Type": "application/json" },
+    body:    JSON.stringify(campos),
+  });
+  const d = await r.json();
+
+  btn.disabled    = false;
+  btn.textContent = "Enviar Pedido";
+
+  if (d.ok) {
+    fecharModalPedido();
+    setFooter("Pedido manual publicado com sucesso.");
+    toast("Pedido enviado!");
+  } else {
+    document.getElementById("modal-erro").textContent = d.erro;
+  }
+}
+
+// Fecha modal ao clicar fora
+document.addEventListener("DOMContentLoaded", () => {
+  document.getElementById("modal-overlay").addEventListener("click", (e) => {
+    if (e.target.id === "modal-overlay") fecharModalPedido();
+  });
+});
 
 // ── Helpers ───────────────────────────────────────────────────
 function setFooter(msg) {
@@ -245,7 +309,7 @@ let _toastTimer;
 function toast(msg, erro = false) {
   const el = document.getElementById("toast");
   el.textContent = msg;
-  el.className = "toast show" + (erro ? " erro" : "");
+  el.className   = "toast show" + (erro ? " erro" : "");
   clearTimeout(_toastTimer);
   _toastTimer = setTimeout(() => el.classList.remove("show"), 3000);
 }
