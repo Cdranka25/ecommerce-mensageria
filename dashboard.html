@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>E-commerce Mensageria — RabbitMQ Dashboard</title>
+    <link rel="stylesheet" href="style.css"/>
+  </head>
+  <body>
+    <!-- ── Header ─────────────────────────────────────────────── -->
+    <header>
+      <div class="logo">
+        <div class="logo-pulse"></div>
+        E-commerce Mensageria
+        <span class="logo-sub">RabbitMQ &middot; Python &middot; FURB</span>
+      </div>
+
+      <div class="btn-group">
+        <button class="btn btn-primary" onclick="iniciarConsumidores()">
+          &#9654; Iniciar Consumidores
+        </button>
+        <button class="btn btn-danger" onclick="iniciarProdutor()">
+          &#128722; Enviar Pedidos
+        </button>
+        <button class="btn" onclick="pararTudo()">&#9632; Parar Tudo</button>
+        <button class="btn" onclick="limparLogs()">&#128465; Limpar</button>
+      </div>
+    </header>
+
+    <!-- ── Cards ──────────────────────────────────────────────── -->
+    <section class="cards-section">
+      <div class="cards-grid" id="cards-grid"></div>
+    </section>
+
+    <!-- ── Abas + Log ─────────────────────────────────────────── -->
+    <main class="main">
+      <div class="tabs" id="tabs"></div>
+
+      <div class="log-panel">
+        <div class="log-toolbar">
+          <span class="log-info" id="log-info">0 mensagens</span>
+          <button class="btn-clear" onclick="limparLogs()">limpar</button>
+        </div>
+        <div class="log-body" id="log-body">
+          <div class="log-empty" id="log-empty">
+            <div class="log-empty-icon">&#128236;</div>
+            <div class="log-empty-text">
+              Nenhuma mensagem. Inicie os consumidores para comecar.
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- ── Rodape ─────────────────────────────────────────────── -->
+    <footer>
+      <span class="footer-msg" id="footer-msg">Pronto.</span>
+      <div class="conn-status">
+        <div class="conn-dot" id="conn-dot"></div>
+        <span id="conn-label">desconectado</span>
+      </div>
+    </footer>
+
+    <div class="toast" id="toast"></div>
+
+    <script src="script.js"></script>
+  </body>
+</html>
