@@ -60,7 +60,7 @@ python consumidores/logistica.py
 
 ```bash
 # Terminal 6
-python produtor/servico_pedidos.py
+python produtor/servico_pedidos_teste.py
 ```
 
 Publica 5 pedidos simulados. Cada consumidor processa em paralelo.
