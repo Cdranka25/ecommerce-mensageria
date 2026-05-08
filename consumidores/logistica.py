@@ -6,7 +6,8 @@
 #  Agenda a entrega ao receber um pedido confirmado.
 #  Em produção: integrar com Correios, Jadlog, Mercado Envios, etc.
 # ============================================================
-import pika
+
+import pika  # type: ignore[import]
 import json
 import time
 import uuid

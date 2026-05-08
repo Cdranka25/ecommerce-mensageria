@@ -7,7 +7,8 @@
 #  dados aleatórios para fins de demonstração/teste.
 #  NÃO usar em produção.
 # ============================================================
-import pika
+
+import pika   # type: ignore[import]
 import json
 import uuid
 import random
@@ -21,7 +22,7 @@ from config.conexao import criar_conexao, setup_infraestrutura
 from config.settings import EXCHANGE_NAME, ROUTING_KEY_NOVO_PEDIDO
 
 
-# ── Dados fictícios para simulação ──────────────────────────
+# Dados fictícios para simulação ──────────────────────────
 PRODUTOS = [
     {"id": "P001", "nome": "Teclado Mecânico", "preco": 299.90},
     {"id": "P002", "nome": "Monitor 27\"",      "preco": 1499.00},

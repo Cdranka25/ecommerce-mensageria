@@ -128,6 +128,9 @@ Todas as filas são duráveis, garantindo persistência.
 * Python 3
 * RabbitMQ
 * Docker
+* Html
+* Css
+* Javascript
 
 ### Padrão de mensagens
 

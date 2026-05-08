@@ -6,7 +6,8 @@
 #  Processa mensagens de novos pedidos, valida o pagamento
 #  e emite ACK (sucesso) ou NACK (falha com retry).
 # ============================================================
-import pika
+
+import pika   # type: ignore[import]
 import json
 import time
 import random
@@ -18,7 +19,6 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from config.conexao import criar_conexao, setup_infraestrutura
 from config.settings import FILA_PAGAMENTO, MAX_RETRIES
 
-# Rastreamento local de tentativas por message_id
 _tentativas: dict[str, int] = {}
 
 
@@ -67,7 +67,6 @@ def processar_mensagem(canal, method, properties, body):
     print(f"    Total   : R$ {total:.2f}")
     print(f"    Pagamento: {pedido.get('forma_pagamento')}")
 
-    # Rastreia tentativas localmente por message_id
     tentativa = _tentativas.get(message_id, 0)
     print(f"    Tentativa: {tentativa + 1}/{MAX_RETRIES}")
 

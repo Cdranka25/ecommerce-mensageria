@@ -2,7 +2,8 @@
 # ============================================================
 #  config/conexao.py  -  Conexão e setup da infraestrutura
 # ============================================================
-import pika
+
+import pika  # type: ignore[import]
 import sys
 import os
 
@@ -25,8 +26,8 @@ def criar_conexao() -> pika.BlockingConnection:
         port=RABBITMQ_PORT,
         virtual_host=RABBITMQ_VHOST,
         credentials=credenciais,
-        heartbeat=60,                    # Mantém conexão viva
-        blocked_connection_timeout=300,  # Timeout se broker travar
+        heartbeat=60,                   
+        blocked_connection_timeout=300, 
     )
     return pika.BlockingConnection(parametros)
 
@@ -37,7 +38,7 @@ def setup_infraestrutura(canal: pika.adapters.blocking_connection.BlockingChanne
     Idempotente: pode ser chamado múltiplas vezes sem erro.
     """
 
-    # ── 1. Dead Letter Exchange e Fila ──────────────────────────────────────
+    # Dead Letter Exchange e Fila ──────────────────────────────────────
     canal.exchange_declare(
         exchange=DLX_EXCHANGE,
         exchange_type="fanout",
@@ -49,20 +50,19 @@ def setup_infraestrutura(canal: pika.adapters.blocking_connection.BlockingChanne
     )
     canal.queue_bind(queue=DLX_QUEUE, exchange=DLX_EXCHANGE)
 
-    # ── 2. Exchange principal (topic) ────────────────────────────────────────
+
     canal.exchange_declare(
         exchange=EXCHANGE_NAME,
         exchange_type=EXCHANGE_TYPE,
-        durable=True,           # Sobrevive a reinicializações do broker
+        durable=True,           
     )
 
-    # ── 3. Argumentos padrão aplicados a todas as filas ─────────────────────
+    # Argumentos padrão aplicados a todas as filas ─────────────────────
     args_fila = {
-        "x-dead-letter-exchange": DLX_EXCHANGE,  # Redireciona falhas para DLQ
+        "x-dead-letter-exchange": DLX_EXCHANGE,
         "x-message-ttl": MESSAGE_TTL,             # Expira mensagem após 1 hora
     }
 
-    # ── 4. Declaração das filas duráveis ────────────────────────────────────
     filas = [
         FILA_PAGAMENTO,
         FILA_ESTOQUE,
@@ -77,8 +77,6 @@ def setup_infraestrutura(canal: pika.adapters.blocking_connection.BlockingChanne
             arguments=args_fila,
         )
 
-    # ── 5. Bindings: conecta a exchange às filas via routing key ────────────
-    #   "pedidos.#" = qualquer routing key que comece com "pedidos."
     for nome_fila in filas:
         canal.queue_bind(
             queue=nome_fila,

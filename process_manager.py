@@ -41,7 +41,7 @@ class ProcessManager:
         self._on_log    = on_log    or (lambda *a: None)
         self._on_status = on_status or (lambda *a: None)
 
-    # ── API pública ──────────────────────────────────────────
+    # API pública ──────────────────────────────────────────
 
     def iniciar_consumidores(self):
         """Inicia todos os serviços do tipo consumidor."""
@@ -72,9 +72,7 @@ class ProcessManager:
         srv = self._produtor_manual()
         sid = srv["id"]
 
-        # Permite múltiplas execuções do produtor manual (não bloqueia se já foi usado)
         if sid in self._processos and self._processos[sid].poll() is None:
-            # Ainda rodando — aguarda terminar (é um processo de vida curta)
             pass
 
         env = os.environ.copy()
@@ -123,12 +121,10 @@ class ProcessManager:
     def consumidores_iniciados(self) -> bool:
         return self._consumidores_ativos()
 
-    # ── Internos ─────────────────────────────────────────────
-
     def _iniciar(self, srv: dict):
         sid = srv["id"]
         if sid in self._processos and self._processos[sid].poll() is None:
-            return  # já rodando
+            return  
 
         env = os.environ.copy()
         env["PYTHONUTF8"]        = "1"
@@ -169,7 +165,12 @@ class ProcessManager:
         """Lê linha a linha o stdout do processo e dispara o callback on_log."""
         sid = srv["id"]
         try:
-            for linha in proc.stdout:
+            stdout = proc.stdout
+            if stdout is None:
+                proc.wait()
+                return
+
+            for linha in stdout:
                 linha = linha.rstrip()
                 if linha:
                     self._on_log(

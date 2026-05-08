@@ -6,7 +6,8 @@
 #  Envia e-mail/SMS de confirmação ao cliente após o pedido.
 #  Em produção: integrar com SendGrid, AWS SES, Twilio, etc.
 # ============================================================
-import pika
+
+import pika   # type: ignore[import]
 import json
 import time
 import sys

@@ -23,7 +23,6 @@ from process_manager import ProcessManager
 BASE  = os.path.dirname(os.path.abspath(__file__))
 PORTA = 8080
 
-# Fila de eventos SSE
 _clientes_sse: list[queue.Queue] = []
 _lock = threading.Lock()
 

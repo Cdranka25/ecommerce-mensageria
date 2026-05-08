@@ -15,7 +15,8 @@
 #      quantidade, forma_pagamento,
 #      endereco_rua, endereco_cidade, endereco_estado, endereco_cep
 # ============================================================
-import pika
+
+import pika  # type: ignore[import]
 import json
 import uuid
 import time

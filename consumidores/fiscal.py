@@ -6,7 +6,8 @@
 #  Gera o documento fiscal (NF-e) ao receber um pedido.
 #  Em produção: integrar com SEFAZ via biblioteca nfeio ou similar.
 # ============================================================
-import pika
+
+import pika  # type: ignore[import]
 import json
 import time
 import uuid
@@ -24,7 +25,7 @@ def gerar_nota_fiscal(pedido: dict) -> dict:
     Simula a emissão de uma NF-e.
     Em produção: chamar API da SEFAZ com certificado digital.
     """
-    time.sleep(1.2)  # Simula tempo de emissão
+    time.sleep(1.2)
     return {
         "nfe_id":      str(uuid.uuid4()),
         "chave_acesso": "".join([str(uuid.uuid4().int)[:44]]),

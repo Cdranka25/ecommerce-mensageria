@@ -5,7 +5,8 @@
 #
 #  Reserva/baixa os itens do estoque ao receber um pedido.
 # ============================================================
-import pika
+
+import pika  # type: ignore[import]
 import json
 import time
 import sys
@@ -16,7 +17,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from config.conexao import criar_conexao, setup_infraestrutura
 from config.settings import FILA_ESTOQUE, MAX_RETRIES
 
-# Estoque simulado em memória (produtos fixos do catálogo de teste)
+# Estoque simulado em memória
 ESTOQUE = {
     "P001": 50,
     "P002": 10,
@@ -25,8 +26,7 @@ ESTOQUE = {
     "P005": 15,
 }
 
-# Rastreamento local de tentativas por message_id
-# (necessário porque o RabbitMQ não popula x-delivery-count de forma confiável)
+
 _tentativas: dict[str, int] = {}
 
 
@@ -40,11 +40,9 @@ def reservar_estoque(pedido: dict) -> tuple[bool, str]:
     produto_id = pedido.get("produto", {}).get("id", "")
     quantidade = pedido.get("quantidade", 1)
 
-    # Produto criado manualmente pelo usuário: sempre disponível
     if produto_id.startswith("CUSTOM-"):
         return True, f"Produto manual reservado ({quantidade} unidade(s)) — sem controle de saldo"
 
-    # Produto do catálogo fixo: verifica saldo
     if produto_id not in ESTOQUE:
         return False, f"Produto {produto_id} não encontrado no catálogo"
 
@@ -72,7 +70,7 @@ def processar_mensagem(canal, method, properties, body):
     print(f"\n[<<] {datetime.now().strftime('%H:%M:%S')} | Pedido: {pedido_id}")
     print(f"    Produto: {produto.get('nome')} (ID: {produto.get('id')}) x{qtd}")
 
-    # Rastreia tentativas localmente por message_id
+
     tentativa = _tentativas.get(message_id, 0)
     print(f"    Tentativa: {tentativa + 1}/{MAX_RETRIES}")
 
@@ -81,7 +79,7 @@ def processar_mensagem(canal, method, properties, body):
     reservado, motivo = reservar_estoque(pedido)
 
     if reservado:
-        _tentativas.pop(message_id, None)   # limpa contador ao ter sucesso
+        _tentativas.pop(message_id, None)
         canal.basic_ack(delivery_tag=method.delivery_tag)
         print(f"    [[OK]] Estoque RESERVADO - {motivo}")
     else:
@@ -91,7 +89,7 @@ def processar_mensagem(canal, method, properties, body):
             print(f"    [[RETRY]] Reenfileirando para nova tentativa...")
             canal.basic_nack(delivery_tag=method.delivery_tag, requeue=True)
         else:
-            _tentativas.pop(message_id, None)   # limpa contador ao esgotar
+            _tentativas.pop(message_id, None)
             print(f"    [[DLQ]] Máximo de tentativas atingido. Enviando para DLQ.")
             canal.basic_nack(delivery_tag=method.delivery_tag, requeue=False)
 
