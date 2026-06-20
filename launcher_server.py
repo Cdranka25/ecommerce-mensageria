@@ -26,7 +26,6 @@ PORTA = 8080
 _clientes_sse: list[queue.Queue] = []
 _lock = threading.Lock()
 
-
 def _broadcast(evento):
     with _lock:
         mortos = []
